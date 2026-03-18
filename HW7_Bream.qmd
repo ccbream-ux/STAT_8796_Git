@@ -1,0 +1,143 @@
+---
+title: "HW7 Instructions"
+author: "Data Science 2"
+editor: visual
+format:
+  html:
+    embed-resources: true
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+```         
+```
+
+```{r setup}
+library(tidyverse)
+library(tidytext)
+library(schrute)
+library(kableExtra)
+library(topicmodels)
+```
+
+```{r, warning=FALSE, message=FALSE}
+office <- theoffice
+```
+
+# The Office
+
+Let's continue to work with *The Office* text from the [schrute](https://cran.r-project.org/web/packages/schrute/index.html) package.
+
+# Primary Topics
+
+For each season (not each episode anymore), determine the primary topics for the show using 1) a TF-IDF approach and 2) an LDA approach. You should do at least some cleaning of the data to exclude words that don't make sense.
+
+#### Data Cleaning:
+
+```{r, warning=FALSE, message=FALSE}
+office2 <- office |> 
+  group_by(season) |> 
+  summarize(text = paste(text, collapse = " "))
+
+# Custom stopwords
+extra_stopwords <- c("yeah", "hey", "uh", "gonna", "um")
+
+office3 <- office2 |> 
+  unnest_tokens(word, text) |> 
+  anti_join(stop_words) |> 
+  #extra words identified after LDA/TF-IDF
+  filter(!word %in% extra_stopwords) |> 
+  #entirely letters
+  filter(str_detect(word, "^[a-z]+$")) |> 
+  #no sound effects
+  filter(!str_detect(word, "(.)\\1{2,}"))
+
+
+```
+
+#### TF-IDF
+
+```{r, warning=FALSE, message=FALSE}
+#Create Term Freq
+office_tf <- office3 |> 
+  count(season, word) |> 
+  group_by(season) |> 
+  mutate(TF = n / sum(n)) |> 
+  ungroup()
+
+#Doc Freq
+office_tf |> 
+  distinct(season, word) |> 
+  count(word, sort = TRUE) |> 
+  rename(DT = n) |> 
+  head(10)
+
+#Doc Freq Prop and ITF
+office_idf <- office_tf |> 
+  distinct(season, word) |> 
+  count(word) |> 
+  rename(DT = n) |> 
+  mutate(DF = DT / {office3 |> distinct(season) |> nrow()},
+         IDF = 1 / DF,
+         logIDF = log(IDF))
+
+#TF-IDF
+office_tf_idf <- office_tf |> 
+  left_join(office_idf, by = "word") |> 
+  mutate(TFIDF = TF * logIDF)
+
+#Primary Words by Season
+office_tf_idf |> 
+  group_by(season) |>             # group by season
+  slice_max(TFIDF, n = 10) |>     # get top 10 words per season
+  select(season, word, TFIDF) |>  # keep only the columns you care about
+  ungroup()
+```
+
+```{r, warning=FALSE, message=FALSE}
+#Top Word Each Season
+#Primary Words by Season
+office_tf_idf |> 
+  group_by(season) |>             # group by season
+  slice_max(TFIDF, n = 1) |>     # get top 10 words per season
+  select(season, word, TFIDF) |>  # keep only the columns you care about
+  ungroup()
+```
+
+This is pretty interesting. I've watched the show through a few times, and these one word TF-IDF top results do a really good job of capturing the major theme. Season 3 and 5 would require a second look. I know in season3, they sing "In the Jungle" which has severage usages of the word, thus likely skewing the result, given its uniqueness.
+
+#### LDA
+
+```{r, warning=FALSE, message=FALSE}
+#DTM
+office_dtm <- office3 |> 
+  count(season, word) |> 
+  cast_dtm(document = season, term = word, value = n)
+
+#fit model
+office_lda <- LDA(office_dtm, k = 3)
+
+#top words
+office_topics <- tidy(office_lda, matrix = "beta") |> 
+  mutate(topic = paste0("topic", topic)) |> 
+  group_by(topic) |> 
+  slice_max(beta, n = 10) |> 
+  ungroup()
+
+#table
+office_topics |> 
+  select(topic, term, beta) |> 
+  head()
+```
+
+```{r, warning=FALSE, message=FALSE}
+office_topics |> 
+  ggplot(aes(beta, term |> reorder(beta), fill = topic |> as.factor())) +
+  geom_col(show.legend = F) +
+  facet_wrap(~topic, scales = "free") +
+  scale_y_reordered()
+```
+
+I made a subjective decision to not remove the proper nouns. I figured some seasons may have a central theme around a character, like the season Michael left. However, it seems the LDA approach was primarily impacted by the characters. TF-IDF gave extra emphasis to unique words across the seasons, and many proper nouns were common across the seasons. This is not true for LDA.
