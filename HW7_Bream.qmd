@@ -57,6 +57,8 @@ office3 <- office2 |>
 
 ```
 
+*Donovan: This cleaning setup makes sense, especially how you’re using `anti_join(stop_words)` and then adding your own custom stopwords. It’s clear what you’re trying to remove and the filters you used help keep the text consistent.*
+
 #### TF-IDF
 
 ```{r, warning=FALSE, message=FALSE}
@@ -108,6 +110,8 @@ office_tf_idf |>
 
 This is pretty interesting. I've watched the show through a few times, and these one word TF-IDF top results do a really good job of capturing the major theme. Season 3 and 5 would require a second look. I know in season3, they sing "In the Jungle" which has severage usages of the word, thus likely skewing the result, given its uniqueness.
 
+*Donovan: I like how you explained the TF-IDF results here. The way you connected the output back to actual moments in the show helps make the results easier to understand. The code for getting the top words by season is also pretty clean and easy to follow.*
+
 #### LDA
 
 ```{r, warning=FALSE, message=FALSE}
@@ -141,3 +145,7 @@ office_topics |>
 ```
 
 I made a subjective decision to not remove the proper nouns. I figured some seasons may have a central theme around a character, like the season Michael left. However, it seems the LDA approach was primarily impacted by the characters. TF-IDF gave extra emphasis to unique words across the seasons, and many proper nouns were common across the seasons. This is not true for LDA.
+
+*Donovan: This explanation of the LDA results is solid. It makes sense how you’re thinking about the topics across seasons, and the way you pulled the top terms using `tidy()` and grouped them is straightforward and works well.*
+
+*Donovan (Suggestion): One thing that could help is adding a few short comments inside the code chunks, especially in the LDA section. For example, briefly explaining what `cast_dtm()` and the LDA model step are doing would make it easier to follow.*
