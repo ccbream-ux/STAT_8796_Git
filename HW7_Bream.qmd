@@ -115,22 +115,22 @@ This is pretty interesting. I've watched the show through a few times, and these
 #### LDA
 
 ```{r, warning=FALSE, message=FALSE}
-#DTM
+#DTM - convert tokenized text into document matrix using cast_dtm
 office_dtm <- office3 |> 
   count(season, word) |> 
   cast_dtm(document = season, term = word, value = n)
 
-#fit model
+#fit model - Using DTM, find unique topics by office season
 office_lda <- LDA(office_dtm, k = 3)
 
-#top words
+#top words - outline the top words by season
 office_topics <- tidy(office_lda, matrix = "beta") |> 
   mutate(topic = paste0("topic", topic)) |> 
   group_by(topic) |> 
   slice_max(beta, n = 10) |> 
   ungroup()
 
-#table
+#table - quick review of topics, term, and beta
 office_topics |> 
   select(topic, term, beta) |> 
   head()
@@ -149,3 +149,5 @@ I made a subjective decision to not remove the proper nouns. I figured some seas
 *Donovan: This explanation of the LDA results is solid. It makes sense how you’re thinking about the topics across seasons, and the way you pulled the top terms using `tidy()` and grouped them is straightforward and works well.*
 
 *Donovan (Suggestion): One thing that could help is adding a few short comments inside the code chunks, especially in the LDA section. For example, briefly explaining what `cast_dtm()` and the LDA model step are doing would make it easier to follow.*
+
+Christ (Response): *Added comments to illustrate what each section of code is doing in my LDA section.*
